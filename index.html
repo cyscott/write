@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>write</title>
+<link rel="stylesheet" href="/src/styles.css" />
+<script type="module" src="/src/main.ts" defer></script>
+</head>
+<body>
+<header id="toolbar">
+  <span id="doc-title">Untitled</span>
+  <span id="status"></span>
+  <span class="spacer"></span>
+  <button id="btn-open">Open</button>
+  <button id="btn-save">Save</button>
+  <button id="btn-settings">⚙ Model</button>
+  <button id="btn-theme">◐ Theme</button>
+  <button id="btn-vim">Vim: on</button>
+  <button id="btn-help">? Keys</button>
+</header>
+
+<div id="settings" class="hidden">
+  <label>Provider <input id="cfg-provider" placeholder="anthropic" /></label>
+  <label>Model <input id="cfg-model" placeholder="claude-sonnet-4-5 (or any pi model id)" /></label>
+  <label>API key <input id="cfg-key" type="password" placeholder="bring your own key — stored only locally" /></label>
+  <button id="btn-connect">Connect pi</button>
+  <button id="btn-models">List pi models</button>
+  <span id="connect-status">Not connected. Tip: leave key blank to use your existing `pi` login.</span>
+</div>
+
+<main>
+  <div id="editor"></div>
+  <aside id="ai-panel" class="hidden">
+    <div class="ai-head"><strong>AI</strong> <span id="ai-action"></span>
+      <span class="spacer"></span><button id="ai-abort">Stop</button><button id="ai-close">✕</button></div>
+    <div id="ai-output"></div>
+    <div class="ai-actions">
+      <button id="ai-accept" class="hidden">✓ Replace selection</button>
+      <button id="ai-reject" class="hidden">✗ Discard</button>
+    </div>
+  </aside>
+</main>
+
+<div id="ai-bar" class="hidden">
+  <button data-action="reword">Reword</button>
+  <button data-action="tighten">Tighten</button>
+  <button data-action="stronger">Stronger argument</button>
+  <button data-action="critique">Critique (don't edit)</button>
+  <button data-action="continue">Continue…</button>
+  <input id="ai-custom" placeholder="…or type an instruction and hit Enter" />
+</div>
+
+<div id="help" class="hidden">
+  <h2>Keys</h2>
+  <pre>
+Vim (when enabled):  h j k l  w b e  0 $  gg G  i a A  o O
+  dd yy p  u Ctrl-r  / search  :w save  :q close panel
+Editor:
+  Cmd+S save    Cmd+O open    Cmd+/ this help
+  Cmd+K AI actions on selection (also right-click selection prompt)
+  Cmd+B toggle Vim    Esc close panels
+AI: select text → Cmd+K → pick action → Accept replaces, Discard keeps yours.
+  </pre>
+  <button onclick="document.querySelector('#help').classList.add('hidden')">Close</button>
+</div>
+
+<footer><span id="wordcount">0 words</span><span class="spacer"></span><span id="theme-label"></span></footer>
+</body>
+</html>

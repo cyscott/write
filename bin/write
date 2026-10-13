@@ -1,0 +1,10 @@
+#!/bin/sh
+# Launch the write editor, optionally with a file.
+APP="/Applications/write.app"
+[ -d "$APP" ] || APP="$(dirname "$0")/../src-tauri/target/release/bundle/macos/write.app"
+if [ -n "$1" ]; then
+  FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+  open "$APP" --args "$FILE"
+else
+  open "$APP"
+fi
