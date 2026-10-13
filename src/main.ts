@@ -1,5 +1,5 @@
-import { EditorState } from "@codemirror/state";
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorState, Compartment } from "@codemirror/state";
+import { EditorView, keymap, Decoration, ViewPlugin, type DecorationSet } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { vim, Vim } from "@replit/codemirror-vim";
@@ -36,12 +36,44 @@ function updateCounts() {
   $("#doc-title").textContent = currentPath ? currentPath.split("/").pop()! : "Untitled";
 }
 
+// Focus mode: dim every paragraph except the one holding the cursor (Ulysses-style)
+const dimDeco = Decoration.line({ class: "cm-dim" });
+const focusPlugin = ViewPlugin.fromClass(class {
+  decorations: DecorationSet;
+  constructor(v: EditorView) { this.decorations = this.build(v); }
+  update(u: any) { if (u.docChanged || u.selectionSet || u.viewportChanged) this.decorations = this.build(u.view); }
+  build(v: EditorView) {
+    const ranges: any[] = []; const doc = v.state.doc;
+    const cursorLine = doc.lineAt(v.state.selection.main.head).number;
+    let start = cursorLine; while (start > 1 && doc.line(start - 1).text.trim() !== "") start--;
+    let end = cursorLine; while (end < doc.lines && doc.line(end + 1).text.trim() !== "") end++;
+    for (let i = 1; i <= doc.lines; i++) if (i < start || i > end) ranges.push(dimDeco.range(doc.line(i).from));
+    return Decoration.set(ranges);
+  }
+}, { decorations: v => v.decorations });
+const focusComp = new Compartment();
+let focusOn = false;
+
+async function refreshLibrary() {
+  const box = $("#sheets"); if (!currentPath) return;
+  const dir = currentPath.slice(0, currentPath.lastIndexOf("/"));
+  const files = await invoke<string[]>("list_sheets", { dir });
+  box.innerHTML = "";
+  for (const f of files) {
+    const b = document.createElement("button");
+    b.textContent = f.split("/").pop()!; if (f === currentPath) b.className = "active";
+    b.addEventListener("click", () => openPath(f)); box.appendChild(b);
+  }
+  document.querySelector(".lib-foot")!.textContent = dir;
+}
+
 const view = new EditorView({
   parent: $("#editor"),
   state: EditorState.create({
     doc: "# Start writing\n\nSelect any passage and press Cmd+K — reword it, tighten it, make the argument stronger.\n",
     extensions: [
       ...(vimOn ? [vim()] : []),
+      focusComp.of([]),
       history(), markdown(), EditorView.lineWrapping,
       keymap.of([...defaultKeymap, ...historyKeymap]),
       EditorView.updateListener.of(u => { if (u.docChanged) updateCounts(); }),
@@ -58,7 +90,7 @@ async function openPath(path: string) {
   const text = await invoke<string>("read_file", { path });
   currentPath = path;
   view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
-  updateCounts();
+  updateCounts(); refreshLibrary();
   await connectPi();
 }
 async function openFile() {
@@ -125,6 +157,18 @@ $("#ai-accept").addEventListener("click", () => {
 $("#ai-reject").addEventListener("click", () => $("#ai-panel").classList.add("hidden"));
 $("#ai-close").addEventListener("click", () => $("#ai-panel").classList.add("hidden"));
 $("#ai-abort").addEventListener("click", () => invoke("pi_abort"));
+$("#btn-library").addEventListener("click", () => $("#library").classList.toggle("closed"));
+$("#btn-focus").addEventListener("click", (e) => {
+  focusOn = !focusOn; (e.target as HTMLElement).classList.toggle("on", focusOn);
+  view.dispatch({ effects: focusComp.reconfigure(focusOn ? [focusPlugin] : []) });
+});
+let fontIdx = 0; const fonts = [["", "Serif"], ["font-mono", "Mono"], ["font-sans", "Sans"]] as const;
+$("#btn-font").addEventListener("click", (e) => {
+  document.body.classList.remove("font-mono", "font-sans");
+  fontIdx = (fontIdx + 1) % fonts.length;
+  if (fonts[fontIdx][0]) document.body.classList.add(fonts[fontIdx][0]);
+  (e.target as HTMLElement).textContent = fonts[fontIdx][1];
+});
 $("#btn-open").addEventListener("click", openFile);
 $("#btn-save").addEventListener("click", saveFile);
 $("#btn-settings").addEventListener("click", () => $("#settings").classList.toggle("hidden"));

@@ -19,6 +19,12 @@ fn write_file(path: String, contents: String) -> Result<(), String> {
     std::fs::write(&path, contents).map_err(|e| e.to_string())
 }
 #[tauri::command]
+fn list_sheets(dir: String) -> Vec<String> {
+    let mut out: Vec<String> = std::fs::read_dir(&dir).map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.extension().map(|x| x == "md" || x == "txt").unwrap_or(false)).map(|p| p.to_string_lossy().into_owned()).collect()).unwrap_or_default();
+    out.sort();
+    out
+}
+#[tauri::command]
 fn initial_file() -> Option<String> {
     std::env::args().skip(1).find(|a| !a.starts_with('-') && (a.ends_with(".md") || a.ends_with(".txt")))
 }
@@ -98,7 +104,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(PiState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![read_file, write_file, initial_file, pi_start, pi_prompt, pi_abort, pi_models])
+        .invoke_handler(tauri::generate_handler![read_file, write_file, list_sheets, initial_file, pi_start, pi_prompt, pi_abort, pi_models])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
